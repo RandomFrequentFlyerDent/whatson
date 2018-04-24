@@ -13,47 +13,23 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.lightcouch.CouchDbClient;
 
+import controller.LuxScraper;
 import models.Screening;
 
 public class WhatsOn {
 
-	public static void main(String[] args) throws ParseException {
-		List<Screening> screenings = new ArrayList<Screening>();
-		
-		try {
-			Document doc = Jsoup.connect("https://www.lux-nijmegen.nl/film/?sorteer=tijd").get();
-			Elements films = doc.select("#agenda > div > ul > li");
-			for (Element film : films) {
-				// don't add event if there is no screening time (e.g. it's a festival)
-				Element tempElement = film.select("a > div.content-wrap > div.times > div > span").first();
-				if (tempElement != null && tempElement.text().contains(":")) {
-					String strTime = tempElement.text();
-					LocalTime eventTime = LocalTime.parse(strTime, DateTimeFormatter.ISO_LOCAL_TIME);
+	public static void main(String[] args) throws IOException {
+		LuxScraper lux = new LuxScraper();
+		List<Screening> screenings = lux.scrape();
 
-					// date
-					String strDate = film.attr("data-date");
-					LocalDate eventDate = LocalDate.parse(strDate, DateTimeFormatter.BASIC_ISO_DATE);  
+		Screening test = screenings.get(0);
 
-					// title
-					tempElement = film.select("a > div.content-wrap > div.content > div > div > h3").first();
-					String title = tempElement.text();
-
-					// venue
-					String venue = "LUX";
-
-					// create screening
-					Screening screening = new Screening(eventDate, eventTime, title, venue);
-					screenings.add(screening);
-				}
-			}
-
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		for (int i = 0; i < screenings.size(); i++) {
-			System.out.println(screenings.get(i).toString());
+		// TODO get other dependencies
+		try (CouchDbClient dbClient = new CouchDbClient("whatson", true, "http", "127.0.0.1", 5984, "user",
+				"passwords")) {
+			dbClient.save(test);
 		}
 
 	}
