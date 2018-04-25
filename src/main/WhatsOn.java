@@ -26,7 +26,6 @@ public class WhatsOn {
 
 		Screening test = screenings.get(0);
 
-		// TODO get other dependencies
 		try (CouchDbClient dbClient = new CouchDbClient("whatson", true, "http", "127.0.0.1", 5984, "user",
 				"passwords")) {
 			dbClient.save(test);
