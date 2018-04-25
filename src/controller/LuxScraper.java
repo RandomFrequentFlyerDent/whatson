@@ -12,6 +12,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
+import models.Movie;
 import models.Screening;
 
 public class LuxScraper implements Scraper {
@@ -34,6 +35,26 @@ public class LuxScraper implements Scraper {
 		}
 
 		return this.screenings;
+	}
+
+	public List<Movie> scrapeMovies() {
+		List<Movie> films = new ArrayList<Movie>();
+		Elements movies;
+		try {
+			movies = retrieveFilmsFromWebsite();
+			films = extractMovies(movies);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		return films;
+
+	}
+
+	private Elements retrieveFilmsFromWebsite() throws IOException {
+		Document doc = Jsoup.connect("https://www.lux-nijmegen.nl/film/?sorteer=tijd").get();
+		Elements films = doc.select("#agenda > div > ul > li");
+		return films;
 	}
 
 	private void extractInformation(Elements films) {
@@ -63,14 +84,28 @@ public class LuxScraper implements Scraper {
 
 	}
 
-	private boolean isFilm(Element filmTime) {
-		return (filmTime != null && filmTime.text().contains(":"));
+	private List<Movie> extractMovies(Elements movies) {
+		List<String> urls = new ArrayList<String>();
+		List<Movie> films = new ArrayList<Movie>();
+		for (Element movie : movies) {
+			String url = movie.getElementsByTag("a").first().attr("href");
+			url = url.replaceAll("\\?dag=.*", "");
+
+			if (!urls.contains(url)) {
+				urls.add(url);
+				Element titleElement = movie.select("a > div.content-wrap > div.content > div > div > h3").first();
+				String title = titleElement.text();
+				Movie film = new Movie(url, title);
+				films.add(film);
+			}
+		}
+
+		return films;
+
 	}
 
-	private Elements retrieveFilmsFromWebsite() throws IOException {
-		Document doc = Jsoup.connect("https://www.lux-nijmegen.nl/film/?sorteer=tijd").get();
-		Elements films = doc.select("#agenda > div > ul > li");
-		return films;
+	private boolean isFilm(Element filmTime) {
+		return (filmTime != null && filmTime.text().contains(":"));
 	}
 
 }
